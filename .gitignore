@@ -1,0 +1,7 @@
+*
+!*.pdf
+!*.s
+!*.ini
+!*.uvoptx
+!*.uvprojx
+!.gitignore
