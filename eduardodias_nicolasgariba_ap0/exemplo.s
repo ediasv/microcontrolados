@@ -33,8 +33,27 @@
 
 ; -------------------------------------------------------------------------------
 ; Função main()
-Start  
 ; Comece o código aqui <======================================================
+Start
+	MOV R0, #0x0400
+	MOVT R0, #0x2000
 
+SearchRam ; inicio do loop vasculhando ram
+	LDR R1, [R0], #0x4
+	CBZ R1, DoneSearchRam ; se achar zero acabou
+	
+	; verificar se eh palindromo
+	BL EhPalindromo
+	
+	B SearchRam
+	
+DoneSearchRam ; fim do loop (viu todos os valores do vetor na ram)
+	B Done
+	
+EhPalindromo
+	BX LR
+
+Done
+	NOP
     ALIGN                           ; garante que o fim da seção está alinhada 
     END                             ; fim do arquivo
