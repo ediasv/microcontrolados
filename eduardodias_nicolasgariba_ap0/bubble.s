@@ -7,7 +7,7 @@
         THUMB                        ; Instru��es do tipo Thumb-2
 ; -------------------------------------------------------------------------------
 ; Declara��es EQU - Defines
-PALINDROMO    EQU 0x20000600
+BEGIN_PALINDROME_ADDRESS EQU 0x20000600
 ; -------------------------------------------------------------------------------
 ; �rea de Dados - Declara��es de vari�veis
 		AREA  DATA, ALIGN=2
@@ -23,13 +23,13 @@ PALINDROMO    EQU 0x20000600
 ;                  c�digo
         AREA    |.text|, CODE, READONLY, ALIGN=2
 
-		; Se alguma fun��o do arquivo for chamada em outro arquivo	
+		; Se alguma funco do arquivo for chamada em outro arquivo	
         EXPORT BubbleSort               ; Permite chamar a fun��o Start a partir de 
 			                        ; outro arquivo. No caso startup.s
 									
-		; Se chamar alguma fun��o externa	
+		; Se chamar alguma funco externa	
         ;IMPORT <func>              ; Permite chamar dentro deste arquivo uma 
-									; fun��o <func>
+									; funco <func>
 
 ; -------------------------------------------------------------------------------
 ; Fun��o main()
@@ -41,10 +41,10 @@ BubbleSort
 
     ;Se N for menor ou igual a 1, não tem o que ordenar
     CMP R0, #1 
-    BLS FimBubble
+    BLS Done
 
     ;Carrega i endereço inicial do vetor
-	LDR R1, =PALINDROMO
+	LDR R1, =BEGIN_PALINDROME_ADDRESS
 
     ;Copia N para o contador
     MOV R2, R0
@@ -69,14 +69,11 @@ Troca
 
 Avanca
     ADD R4, R4, #2 ; Avanca ponteiro para o proximo numero 
-    SUBS R3, R3, #1 
+    SUBS R3, R3, #1
     BNE LoopInterno ;Se o contador não for zero, repete o loop
 
     SUBS R2, R2, #1 
     BNE LoopExterno ;Se o contador não for zero, repete o loop
-
-FimBubble
-    BX LR
 
 Done
 	NOP
