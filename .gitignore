@@ -1,4 +1,15 @@
-*
+Listings
+Objects
+
+*.o 
+*.axf
+*.htm
+*.lnp
+*.map
+*.uvguix*
+*.dep
+*.scvd
+
 !*.pdf
 !*.s
 !*.ini
