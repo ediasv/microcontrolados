@@ -2,26 +2,26 @@
 ; Desenvolvido para a placa EK-TM4C1294XL
 ; Prof. Guilherme Peron
 ; 24/08/2020
-; Este programa espera o usuário apertar a chave USR_SW1.
-; Caso o usuário pressione a chave, o LED1 piscará a cada 0,5 segundo.
+; Este programa espera o usuï¿½rio apertar a chave USR_SW1.
+; Caso o usuï¿½rio pressione a chave, o LED1 piscarï¿½ a cada 0,5 segundo.
 
 ; -------------------------------------------------------------------------------
-        THUMB                        ; Instruções do tipo Thumb-2
+        THUMB                        ; Instruï¿½ï¿½es do tipo Thumb-2
 ; -------------------------------------------------------------------------------
 		
-; Declarações EQU - Defines
+; Declaraï¿½ï¿½es EQU - Defines
 ;<NOME>         EQU <VALOR>
 ; ========================
 
 ; -------------------------------------------------------------------------------
-; Área de Dados - Declarações de variáveis
+; ï¿½rea de Dados - Declaraï¿½ï¿½es de variï¿½veis
 		AREA  DATA, ALIGN=2
-		; Se alguma variável for chamada em outro arquivo
-		;EXPORT  <var> [DATA,SIZE=<tam>]   ; Permite chamar a variável <var> a 
+		; Se alguma variï¿½vel for chamada em outro arquivo
+		;EXPORT  <var> [DATA,SIZE=<tam>]   ; Permite chamar a variï¿½vel <var> a 
 		                                   ; partir de outro arquivo
-;<var>	SPACE <tam>                        ; Declara uma variável de nome <var>
+;<var>	SPACE <tam>                        ; Declara uma variï¿½vel de nome <var>
                                            ; de <tam> bytes a partir da primeira 
-                                           ; posição da RAM		
+                                           ; posiï¿½ï¿½o da RAM		
 TemperaturaAlvo		SPACE		2
 TemperaturaAtual	SPACE		2
 Contador			SPACE		2
@@ -29,17 +29,17 @@ Contador			SPACE		2
 		EXPORT TemperaturaAtual [DATA,SIZE=2]
 
 ; -------------------------------------------------------------------------------
-; Área de Código - Tudo abaixo da diretiva a seguir será armazenado na memória de 
-;                  código
+; ï¿½rea de Cï¿½digo - Tudo abaixo da diretiva a seguir serï¿½ armazenado na memï¿½ria de 
+;                  cï¿½digo
         AREA    |.text|, CODE, READONLY, ALIGN=2
 
-		; Se alguma função do arquivo for chamada em outro arquivo	
-        EXPORT Start                ; Permite chamar a função Start a partir de 
+		; Se alguma funï¿½ï¿½o do arquivo for chamada em outro arquivo	
+        EXPORT Start                ; Permite chamar a funï¿½ï¿½o Start a partir de 
 			                        ; outro arquivo. No caso startup.s
 									
-		; Se chamar alguma função externa	
+		; Se chamar alguma funï¿½ï¿½o externa	
         ;IMPORT <func>              ; Permite chamar dentro deste arquivo uma 
-									; função <func>
+									; funï¿½ï¿½o <func>
 		IMPORT  PLL_Init
 		IMPORT  SysTick_Init
 		IMPORT  SysTick_Wait1ms			
@@ -53,13 +53,13 @@ Contador			SPACE		2
 
 
 ; -------------------------------------------------------------------------------
-; Função main()
+; Funï¿½ï¿½o main()
 Start  		
 		BL PLL_Init                  ;Chama a subrotina para alterar o clock do microcontrolador para 80MHz
 		BL SysTick_Init
 		BL GPIO_Init                 ;Chama a subrotina que inicializa os GPIO
 		
-		;Carregar valores iniciais nas variáveis
+		;Carregar valores iniciais nas variï¿½veis
 		LDR 	R0, =TemperaturaAlvo
 		MOV		R1, #22
 		STRH 	R1,[R0]
@@ -107,7 +107,7 @@ MainLoop
 		MOV		R0, #1
 		BL		SysTick_Wait1ms
 
-		; ---- LEDs: setpoint em binário, ativa LEDs, 1 ms, desativa, 1 ms ----
+		; ---- LEDs: setpoint em binï¿½rio, ativa LEDs, 1 ms, desativa, 1 ms ----
 		LDR		R0, =TemperaturaAlvo
 		LDRH	R0, [R0]
 		BL		PAT_AllOff
@@ -124,7 +124,7 @@ MainLoop
 		LDRH  	R1, [R0]
 		SUBS  	R1, R1, #1
 		STRH  	R1, [R0]
-		BNE   	MainLoop                 ; ainda não completou 1 s
+		BNE   	MainLoop                 ; ainda nï¿½o completou 1 s
 
 		MOV   	R1, #166
 		STRH  	R1, [R0]             ; reinicia o contador
@@ -134,7 +134,7 @@ MainLoop
 AtualizaTemperatura
 		; comparar temperatura alvo com atual e atualizar o 
 		; valor da temperatura atual de acordo
-		; também atualizar os leds do port N
+		; tambï¿½m atualizar os leds do port N
 		LDR		R0, =TemperaturaAtual
 		LDR		R1, =TemperaturaAlvo
 		LDRH	R4, [R0]
@@ -174,6 +174,14 @@ Equilibrio
 
 ; -------------------------------------------------------------------------------------------------------------------------
 ; Fim do Arquivo
-; -------------------------------------------------------------------------------------------------------------------------			
-    ALIGN                        ;Garante que o fim da seção está alinhada 
+; -------------------------------------------------------------------------------------------------------------------------	
+
+
+; Indice:      0     1    2    3      4     5     6     7     8     9 
+TabelaSegmentos
+        DCB 0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F
+
+; -------------------------------------------------------------------------------------------------------------------------
+	
+	ALIGN                        ;Garante que o fim da seï¿½ï¿½o estï¿½ alinhada 
     END                          ;Fim do arquivo
