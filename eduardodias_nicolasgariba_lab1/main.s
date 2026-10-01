@@ -22,9 +22,9 @@
 ;<var>	SPACE <tam>                        ; Declara uma variável de nome <var>
                                            ; de <tam> bytes a partir da primeira 
                                            ; posição da RAM		
-		TemperaturaAlvo		SPACE		2
-		TemperaturaAtual	SPACE		2
-		Contador			SPACE		2
+TemperaturaAlvo		SPACE		2
+TemperaturaAtual	SPACE		2
+Contador			SPACE		2
 		EXPORT TemperaturaAlvo	[DATA,SIZE=2]
 		EXPORT TemperaturaAtual [DATA,SIZE=2]
 
