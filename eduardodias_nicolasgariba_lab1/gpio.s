@@ -96,7 +96,6 @@ NVIC_PRI12_R	EQU    0xE000E430
 		; Se alguma função do arquivo for chamada em outro arquivo	
         EXPORT GPIO_Init            ; Permite chamar GPIO_Init de outro arquivo
 		EXPORT PortN_Output			; Permite chamar PortN_Output de outro arquivo
-		EXPORT PortJ_Input          ; Permite chamar PortJ_Input de outro arquivo
 		EXPORT GPIOPortJ_Handler
 		EXPORT PAT_Data_Output
 		
@@ -122,7 +121,81 @@ EsperaGPIO
 			LDR R1, [R0]
 			AND R1, R1, R2
 			CMP R1, R2
-			BNE EsperaGPIO				   
+			BNE EsperaGPIO
+
+			; ===== PB4 e PB5: selecao dos displays =====
+
+			; Preparar nivel inicial 0: desativado
+			LDR R0, =GPIO_PORTB_DATA_R
+			LDR R1, [R0]
+			BIC R1, R1, #0x30
+			STR R1, [R0]
+
+			; Desabilitar funcao analogica
+			LDR R0, =GPIO_PORTB_AMSEL_R
+			LDR R1, [R0]
+			BIC R1, R1, #0x30
+			STR R1, [R0]
+
+			; Selecionar GPIO
+			LDR R0, =GPIO_PORTB_AFSEL_R
+			LDR R1, [R0]
+			BIC R1, R1, #0x30
+			STR R1, [R0]
+
+			LDR R0, =GPIO_PORTB_PCTL_R
+			LDR R1, [R0]
+			LDR R2, =0x00FF0000
+			BIC R1, R1, R2
+			STR R1, [R0]
+
+			; Configurar PB4 e PB5 como saidas
+			LDR R0, =GPIO_PORTB_DIR_R
+			LDR R1, [R0]
+			ORR R1, R1, #0x30
+			STR R1, [R0]
+
+			; Habilitar funcao digital
+			LDR R0, =GPIO_PORTB_DEN_R
+			LDR R1, [R0]
+			ORR R1, R1, #0x30
+			STR R1, [R0]
+
+			; ===== PP5: selecao dos oito LEDs =====
+
+			; Preparar nivel inicial 0:desativado
+			LDR R0, =GPIO_PORTP_DATA_R
+			LDR R1, [R0]
+			BIC R1, R1, #0x20
+			STR R1, [R0]
+
+			LDR R0, =GPIO_PORTP_AMSEL_R
+			LDR R1, [R0]
+			BIC R1, R1, #0x20
+			STR R1, [R0]
+
+			LDR R0, =GPIO_PORTP_AFSEL_R
+			LDR R1, [R0]
+			BIC R1, R1, #0x20
+			STR R1, [R0]
+
+			LDR R0, =GPIO_PORTP_PCTL_R
+			LDR R1, [R0]
+			LDR R2, =0x00F00000
+			BIC R1, R1, R2
+			STR R1, [R0]
+
+			LDR R0, =GPIO_PORTP_DIR_R
+			LDR R1, [R0]
+			ORR R1, R1, #0x20
+			STR R1, [R0]
+
+			LDR R0, =GPIO_PORTP_DEN_R
+			LDR R1, [R0]
+			ORR R1, R1, #0x20
+			STR R1, [R0]
+
+
 			 
 ; 2. Limpar o AMSEL para desabilitar a analógica
             MOV     R1, #0x00						;Colocar 0 no registrador para desabilitar a função analógica
