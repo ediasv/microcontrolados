@@ -45,6 +45,11 @@ Contador			SPACE		2
 		IMPORT  SysTick_Wait1ms			
 		IMPORT  GPIO_Init
         IMPORT  PortN_Output
+		IMPORT  PAT_AllOff
+		IMPORT  PAT_Data_Output
+		IMPORT  PAT_Dezena_On
+		IMPORT  PAT_Unidade_On
+		IMPORT  PAT_LEDs_On
 
 
 ; -------------------------------------------------------------------------------
@@ -71,7 +76,50 @@ MainLoop
 		; dezena:  dado, ativa Q2, Wait1ms, desativa Q2, Wait1ms
 		; unidade: dado, ativa Q1, Wait1ms, desativa Q1, Wait1ms
 		; LEDs:    dado, ativa Q3, Wait1ms, desativa Q3, Wait1ms
+		
+		; ---- separar dezena e unidade da temperatura atual ----
+		LDR		R0, =TemperaturaAtual
+		LDRH	R1, [R0]
+		MOV		R2, #10
+		UDIV	R4, R1, R2			; R4 = dezena
+		MLS		R5, R4, R2, R1		; R5 = unidade = R1 - R4*10
+		LDR		R6, =Tabela7Seg
 
+		; ---- dezena: dado, ativa DS1, 1 ms, desativa, 1 ms ----
+		LDRB	R0, [R6, R4]
+		BL		PAT_AllOff
+		BL		PAT_Data_Output
+		BL		PAT_Dezena_On
+		MOV		R0, #1
+		BL		SysTick_Wait1ms
+		BL		PAT_AllOff
+		MOV		R0, #1
+		BL		SysTick_Wait1ms
+
+		; ---- unidade: dado, ativa DS2, 1 ms, desativa, 1 ms ----
+		LDRB	R0, [R6, R5]
+		BL		PAT_AllOff
+		BL		PAT_Data_Output
+		BL		PAT_Unidade_On
+		MOV		R0, #1
+		BL		SysTick_Wait1ms
+		BL		PAT_AllOff
+		MOV		R0, #1
+		BL		SysTick_Wait1ms
+
+		; ---- LEDs: setpoint em binário, ativa LEDs, 1 ms, desativa, 1 ms ----
+		LDR		R0, =TemperaturaAlvo
+		LDRH	R0, [R0]
+		BL		PAT_AllOff
+		BL		PAT_Data_Output
+		BL		PAT_LEDs_On
+		MOV		R0, #1
+		BL		SysTick_Wait1ms
+		BL		PAT_AllOff
+		MOV		R0, #1
+		BL		SysTick_Wait1ms
+		
+		; =========================
 		LDR   	R0, =Contador
 		LDRH  	R1, [R0]
 		SUBS  	R1, R1, #1
@@ -105,7 +153,7 @@ Aquecer
 		ADD 	R4, R4, #1
 		; PN1 acende
 		; PN0 apaga
-		MOV 	R0, #2_00000010
+		MOV 	R0, #2_00000001
 		BL		PortN_Output
 		B 		AtualizaAtual
 
@@ -113,7 +161,7 @@ Resfriar
 		SUB 	R4, R4, #1
 		; PN1 apaga
 		; PN0 acende
-		MOV 	R0, #2_00000001
+		MOV 	R0, #2_00000010
 		BL 		PortN_Output
 		B		AtualizaAtual
 
@@ -126,6 +174,6 @@ Equilibrio
 
 ; -------------------------------------------------------------------------------------------------------------------------
 ; Fim do Arquivo
-; -------------------------------------------------------------------------------------------------------------------------	
+; -------------------------------------------------------------------------------------------------------------------------			
     ALIGN                        ;Garante que o fim da seção está alinhada 
     END                          ;Fim do arquivo
