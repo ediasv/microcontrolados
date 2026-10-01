@@ -15,6 +15,7 @@ BIT1	EQU 2_0010
 ; Definições dos Registradores Gerais
 SYSCTL_RCGCGPIO_R	 EQU	0x400FE608
 SYSCTL_PRGPIO_R		 EQU    0x400FEA08
+
 ; ========================
 ; Definições dos Ports
 ; PORT J
@@ -28,6 +29,12 @@ GPIO_PORTJ_AHB_DEN_R     	EQU    0x4006051C
 GPIO_PORTJ_AHB_PUR_R     	EQU    0x40060510	
 GPIO_PORTJ_AHB_DATA_R    	EQU    0x400603FC
 GPIO_PORTJ_AHB_DATA_BITS_R  EQU    0x40060000
+GPIO_PORTJ_AHB_IM_R 		EQU	   0x40060410
+GPIO_PORTJ_AHB_IS_R 		EQU	   0x40060404
+GPIO_PORTJ_AHB_IBE_R 		EQU	   0x40060408
+GPIO_PORTJ_AHB_IEV_R 		EQU	   0x4006040C
+GPIO_PORTJ_AHB_ICR_R 		EQU	   0x4006041C
+GPIO_PORTJ_AHB_MIS_R 		EQU	   0x40060418	
 GPIO_PORTJ               	EQU    2_000000100000000
 ; PORT N
 GPIO_PORTN_LOCK_R    	EQU    0x40064520
@@ -42,6 +49,9 @@ GPIO_PORTN_DATA_R    	EQU    0x400643FC
 GPIO_PORTN_DATA_BITS_R  EQU    0x40064000
 GPIO_PORTN               	EQU    2_001000000000000	
 
+; NVIC
+NVIC_EN1_R		EQU    0xE000E104
+NVIC_PRI12_R	EQU    0xE000E430	 
 
 ; -------------------------------------------------------------------------------
 ; Área de Código - Tudo abaixo da diretiva a seguir será armazenado na memória de 
@@ -52,7 +62,8 @@ GPIO_PORTN               	EQU    2_001000000000000
         EXPORT GPIO_Init            ; Permite chamar GPIO_Init de outro arquivo
 		EXPORT PortN_Output			; Permite chamar PortN_Output de outro arquivo
 		EXPORT PortJ_Input          ; Permite chamar PortJ_Input de outro arquivo
-									
+		EXPORT GPIOPortJ_Handler
+												
 
 ;--------------------------------------------------------------------------------
 ; Função GPIO_Init
@@ -109,13 +120,50 @@ EsperaGPIO  LDR     R1, [R0]						;Lê da memória o conteúdo do endereço do regis
             STR     R1, [R0]							;Escreve no registrador da memória funcionalidade digital 
  
             LDR     R0, =GPIO_PORTJ_AHB_DEN_R			;Carrega o endereço do DEN
-			MOV     R1, #2_00000001                     ;J0     
+			MOV     R1, #2_00000011                     ;J0     
             STR     R1, [R0]                            ;Escreve no registrador da memória funcionalidade digital
 			
 ; 7. Para habilitar resistor de pull-up interno, setar PUR para 1
 			LDR     R0, =GPIO_PORTJ_AHB_PUR_R			;Carrega o endereço do PUR para a porta J
-			MOV     R1, #2_1							;Habilitar funcionalidade digital de resistor de pull-up 
+			MOV     R1, #2_11							;Habilitar funcionalidade digital de resistor de pull-up 
             STR     R1, [R0]							;Escreve no registrador da memória do resistor de pull-up
+			
+; Interrupcoes
+			LDR R1, =GPIO_PORTJ_AHB_IM_R
+			MOV R2, #2_00
+			STR R2, [R1]
+
+			LDR R1, =GPIO_PORTJ_AHB_IS_R
+			MOV R2, #2_00
+			STR R2, [R1]
+
+			LDR R1, =GPIO_PORTJ_AHB_IBE_R
+			MOV R2, #2_00
+			STR R2, [R1]
+
+			LDR R1, =GPIO_PORTJ_AHB_IEV_R
+			MOV R2, #2_10
+			STR R2, [R1]
+
+			LDR R1, =GPIO_PORTJ_AHB_ICR_R
+			MOV R2, #2_11
+			STR R2, [R1]
+
+			LDR R1, =GPIO_PORTJ_AHB_IM_R
+			MOV R2, #2_11
+			STR R2, [R1]
+
+			LDR R1, =NVIC_EN1_R
+			MOV R2, #2_1
+			LSL R2, #19
+			STR R2, [R1]
+			
+			LDR R1, =NVIC_PRI12_R
+			MOV R2, #5
+			LSL R2, #29
+			STR R2, [R1]
+	
+; ====================
 			BX      LR
 
 ; -------------------------------------------------------------------------------
@@ -138,7 +186,48 @@ PortN_Output
 PortJ_Input
 	LDR	R1, =GPIO_PORTJ_AHB_DATA_R		    ;Carrega o valor do offset do data register
 	LDR R0, [R1]                            ;Lê no barramento de dados dos pinos [J0]
+		
 	BX LR									;Retorno
+	
+GPIOPortJ_Handler
+	LDR R6, =GPIO_PORTJ_AHB_MIS_R
+	
+	LDR R1, [R6]
+	AND R5, R1, #2_01	; J0 ta pressionado?
+	CMP R5, #2_01
+	BEQ J0_Interrupt
+	
+	AND R5, R1, #2_10	; J1 ta pressionado?
+	CMP R5, #2_10	
+	BEQ J1_Interrupt
+
+Finish_Handle_J_Interrupt
+	BX LR
+	
+J0_Interrupt
+	LDR R1, =GPIO_PORTJ_AHB_ICR_R
+	MOV R0, #2_01
+	STR R0, [R1]
+	
+	MOV R0, #2_01
+	PUSH {LR}
+	BL PortN_Output
+	POP {LR}
+	
+	B Finish_Handle_J_Interrupt
+
+J1_Interrupt
+	LDR R1, =GPIO_PORTJ_AHB_ICR_R
+	MOV R0, #2_10
+	STR R0, [R1]
+	
+	MOV R0, #2_00
+	PUSH {LR}
+	BL PortN_Output
+	POP {LR}
+	
+	B Finish_Handle_J_Interrupt
+
 
 
 
