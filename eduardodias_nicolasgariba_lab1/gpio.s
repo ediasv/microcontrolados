@@ -4,20 +4,23 @@
 ; 24/08/2020
 
 ; -------------------------------------------------------------------------------
-        THUMB                        ; InstruÁıes do tipo Thumb-2
+        THUMB                        ; Instru√ß√µes do tipo Thumb-2
 ; -------------------------------------------------------------------------------
-; DeclaraÁıes EQU - Defines
+; Declara√ß√µes EQU - Defines
 ; ========================
-; DefiniÁıes de Valores
+; Defini√ß√µes de Valores
 BIT0	EQU 2_0001
 BIT1	EQU 2_0010
 ; ========================
-; DefiniÁıes dos Registradores Gerais
+; Defini√ß√µes dos Registradores Gerais
 SYSCTL_RCGCGPIO_R	 EQU	0x400FE608
 SYSCTL_PRGPIO_R		 EQU    0x400FEA08
 
+; Clock das portas A, B, J, N, P e Q
+GPIO_CLOCK_MASK EQU 0x00007103
+
 ; ========================
-; DefiniÁıes dos Ports
+; Defini√ß√µes dos Ports
 ; PORT J
 GPIO_PORTJ_AHB_LOCK_R    	EQU    0x40060520
 GPIO_PORTJ_AHB_CR_R      	EQU    0x40060524
@@ -48,85 +51,181 @@ GPIO_PORTN_PUR_R     	EQU    0x40064510
 GPIO_PORTN_DATA_R    	EQU    0x400643FC
 GPIO_PORTN_DATA_BITS_R  EQU    0x40064000
 GPIO_PORTN               	EQU    2_001000000000000	
+	
+; PORT A - dados da PAT em PA4 a PA7
+GPIO_PORTA_DATA_R    EQU 0x400583FC
+GPIO_PORTA_DIR_R     EQU 0x40058400
+GPIO_PORTA_AFSEL_R   EQU 0x40058420
+GPIO_PORTA_DEN_R     EQU 0x4005851C
+GPIO_PORTA_AMSEL_R   EQU 0x40058528
+GPIO_PORTA_PCTL_R    EQU 0x4005852C
+
+; PORT Q - dados da PAT em PQ0 a PQ3
+GPIO_PORTQ_DATA_R    EQU 0x400663FC
+GPIO_PORTQ_DIR_R     EQU 0x40066400
+GPIO_PORTQ_AFSEL_R   EQU 0x40066420
+GPIO_PORTQ_DEN_R     EQU 0x4006651C
+GPIO_PORTQ_AMSEL_R   EQU 0x40066528
+GPIO_PORTQ_PCTL_R    EQU 0x4006652C
+	
+; PORT B - selecao da PAT em PB4 e PB5
+GPIO_PORTB_DATA_R    EQU 0x400593FC
+GPIO_PORTB_DIR_R     EQU 0x40059400
+GPIO_PORTB_AFSEL_R   EQU 0x40059420
+GPIO_PORTB_DEN_R     EQU 0x4005951C
+GPIO_PORTB_AMSEL_R   EQU 0x40059528
+GPIO_PORTB_PCTL_R    EQU 0x4005952C
+
+; PORT P - selecao da PAT em PP5
+GPIO_PORTP_DATA_R    EQU 0x400653FC
+GPIO_PORTP_DIR_R     EQU 0x40065400
+GPIO_PORTP_AFSEL_R   EQU 0x40065420
+GPIO_PORTP_DEN_R     EQU 0x4006551C
+GPIO_PORTP_AMSEL_R   EQU 0x40065528
+GPIO_PORTP_PCTL_R    EQU 0x4006552C
 
 ; NVIC
 NVIC_EN1_R		EQU    0xE000E104
 NVIC_PRI12_R	EQU    0xE000E430	 
 
 ; -------------------------------------------------------------------------------
-; ¡rea de CÛdigo - Tudo abaixo da diretiva a seguir ser· armazenado na memÛria de 
-;                  cÛdigo
+; √Årea de C√≥digo - Tudo abaixo da diretiva a seguir ser√° armazenado na mem√≥ria de 
+;                  c√≥digo
         AREA    |.text|, CODE, READONLY, ALIGN=2
 
-		; Se alguma funÁ„o do arquivo for chamada em outro arquivo	
+		; Se alguma fun√ß√£o do arquivo for chamada em outro arquivo	
         EXPORT GPIO_Init            ; Permite chamar GPIO_Init de outro arquivo
 		EXPORT PortN_Output			; Permite chamar PortN_Output de outro arquivo
+		EXPORT PortJ_Input          ; Permite chamar PortJ_Input de outro arquivo
 		EXPORT GPIOPortJ_Handler
+		EXPORT PAT_Data_Output
+		
+		IMPORT TemperaturaAlvo
 												
 
 ;--------------------------------------------------------------------------------
-; FunÁ„o GPIO_Init
-; Par‚metro de entrada: N„o tem
-; Par‚metro de saÌda: N„o tem
+; Fun√ß√£o GPIO_Init
+; Par√¢metro de entrada: N√£o tem
+; Par√¢metro de sa√≠da: N√£o tem
 GPIO_Init
-;=====================
-; 1. Ativar o clock para a porta setando o bit correspondente no registrador RCGCGPIO,
-; apÛs isso verificar no PRGPIO se a porta est· pronta para uso.
-; enable clock to GPIOF at clock gating register
-            LDR     R0, =SYSCTL_RCGCGPIO_R  		;Carrega o endereÁo do registrador RCGCGPIO
-			MOV		R1, #GPIO_PORTN                 ;Seta o bit da porta N
-			ORR     R1, #GPIO_PORTJ					;Seta o bit da porta J, fazendo com OR
-            STR     R1, [R0]						;Move para a memÛria os bits das portas no endereÁo do RCGCGPIO
- 
-            LDR     R0, =SYSCTL_PRGPIO_R			;Carrega o endereÁo do PRGPIO para esperar os GPIO ficarem prontos
-EsperaGPIO  LDR     R1, [R0]						;LÍ da memÛria o conte˙do do endereÁo do registrador
-			MOV     R2, #GPIO_PORTN                 ;Seta os bits correspondentes ‡s portas para fazer a comparaÁ„o
-			ORR     R2, #GPIO_PORTJ                 ;Seta o bit da porta J, fazendo com OR
-            TST     R1, R2							;Testa o R1 com R2 fazendo R1 & R2
-            BEQ     EsperaGPIO					    ;Se o flag Z=1, volta para o laÁo. Sen„o continua executando
- 
-; 2. Limpar o AMSEL para desabilitar a analÛgica
-            MOV     R1, #0x00						;Colocar 0 no registrador para desabilitar a funÁ„o analÛgica
-            LDR     R0, =GPIO_PORTJ_AHB_AMSEL_R     ;Carrega o R0 com o endereÁo do AMSEL para a porta J
-            STR     R1, [R0]						;Guarda no registrador AMSEL da porta J da memÛria
-            LDR     R0, =GPIO_PORTN_AMSEL_R			;Carrega o R0 com o endereÁo do AMSEL para a porta N
-            STR     R1, [R0]					    ;Guarda no registrador AMSEL da porta N da memÛria
+			; Habilitar as portas A, B, J, N, P e Q
+			LDR R0, =SYSCTL_RCGCGPIO_R
+			LDR R1, [R0]
+			LDR R2, =GPIO_CLOCK_MASK
+			ORR R1, R1, R2
+			STR R1, [R0]
+
+			; Esperar todas essas portas ficarem prontas
+			LDR R0, =SYSCTL_PRGPIO_R
+
+EsperaGPIO
+			LDR R1, [R0]
+			AND R1, R1, R2
+			CMP R1, R2
+			BNE EsperaGPIO				   
+			 
+; 2. Limpar o AMSEL para desabilitar a anal√≥gica
+            MOV     R1, #0x00						;Colocar 0 no registrador para desabilitar a fun√ß√£o anal√≥gica
+            LDR     R0, =GPIO_PORTJ_AHB_AMSEL_R     ;Carrega o R0 com o endere√ßo do AMSEL para a porta J
+            STR     R1, [R0]						;Guarda no registrador AMSEL da porta J da mem√≥ria
+            LDR     R0, =GPIO_PORTN_AMSEL_R			;Carrega o R0 com o endere√ßo do AMSEL para a porta N
+            STR     R1, [R0]					    ;Guarda no registrador AMSEL da porta N da mem√≥ria
  
 ; 3. Limpar PCTL para selecionar o GPIO
             MOV     R1, #0x00					    ;Colocar 0 no registrador para selecionar o modo GPIO
-            LDR     R0, =GPIO_PORTJ_AHB_PCTL_R		;Carrega o R0 com o endereÁo do PCTL para a porta J
-            STR     R1, [R0]                        ;Guarda no registrador PCTL da porta J da memÛria
-            LDR     R0, =GPIO_PORTN_PCTL_R      	;Carrega o R0 com o endereÁo do PCTL para a porta N
-            STR     R1, [R0]                        ;Guarda no registrador PCTL da porta N da memÛria
-; 4. DIR para 0 se for entrada, 1 se for saÌda
-            LDR     R0, =GPIO_PORTN_DIR_R			;Carrega o R0 com o endereÁo do DIR para a porta N
-			MOV     R1, #2_0010						;PN1
+            LDR     R0, =GPIO_PORTJ_AHB_PCTL_R		;Carrega o R0 com o endere√ßo do PCTL para a porta J
+            STR     R1, [R0]                        ;Guarda no registrador PCTL da porta J da mem√≥ria
+            LDR     R0, =GPIO_PORTN_PCTL_R      	;Carrega o R0 com o endere√ßo do PCTL para a porta N
+            STR     R1, [R0]                        ;Guarda no registrador PCTL da porta N da mem√≥ria
+; 4. DIR para 0 se for entrada, 1 se for sa√≠da
+            LDR     R0, =GPIO_PORTN_DIR_R			;Carrega o R0 com o endere√ßo do DIR para a porta N
+			MOV     R1, #2_0011						;PNO e PN1 como saida
             STR     R1, [R0]						;Guarda no registrador
-			; O certo era verificar os outros bits da PJ para n„o transformar entradas em saÌdas desnecess·rias
-            LDR     R0, =GPIO_PORTJ_AHB_DIR_R		;Carrega o R0 com o endereÁo do DIR para a porta J
-            MOV     R1, #0x00               		;Colocar 0 no registrador DIR para funcionar com saÌda
-            STR     R1, [R0]						;Guarda no registrador PCTL da porta J da memÛria
+			; O certo era verificar os outros bits da PJ para n√£o transformar entradas em sa√≠das desnecess√°rias
+            LDR     R0, =GPIO_PORTJ_AHB_DIR_R		;Carrega o R0 com o endere√ßo do DIR para a porta J
+            MOV     R1, #0x00               		;Colocar 0 no registrador DIR para funcionar com sa√≠da
+            STR     R1, [R0]						;Guarda no registrador PCTL da porta J da mem√≥ria
 ; 5. Limpar os bits AFSEL para 0 para selecionar GPIO 
-;    Sem funÁ„o alternativa
-            MOV     R1, #0x00						;Colocar o valor 0 para n„o setar funÁ„o alternativa
-            LDR     R0, =GPIO_PORTN_AFSEL_R			;Carrega o endereÁo do AFSEL da porta N
+;    Sem fun√ß√£o alternativa
+            MOV     R1, #0x00						;Colocar o valor 0 para n√£o setar fun√ß√£o alternativa
+            LDR     R0, =GPIO_PORTN_AFSEL_R			;Carrega o endere√ßo do AFSEL da porta N
             STR     R1, [R0]						;Escreve na porta
-            LDR     R0, =GPIO_PORTJ_AHB_AFSEL_R     ;Carrega o endereÁo do AFSEL da porta J
+            LDR     R0, =GPIO_PORTJ_AHB_AFSEL_R     ;Carrega o endere√ßo do AFSEL da porta J
             STR     R1, [R0]                        ;Escreve na porta
 ; 6. Setar os bits de DEN para habilitar I/O digital
-            LDR     R0, =GPIO_PORTN_DEN_R			    ;Carrega o endereÁo do DEN
-            MOV     R1, #2_00000010                     ;N1
-            STR     R1, [R0]							;Escreve no registrador da memÛria funcionalidade digital 
+            LDR     R0, =GPIO_PORTN_DEN_R			    ;Carrega o endere√ßo do DEN
+            MOV     R1, #2_00000011                     ;PN0 E PN1
+            STR     R1, [R0]							;Escreve no registrador da mem√≥ria funcionalidade digital 
  
-            LDR     R0, =GPIO_PORTJ_AHB_DEN_R			;Carrega o endereÁo do DEN
+            LDR     R0, =GPIO_PORTJ_AHB_DEN_R			;Carrega o endere√ßo do DEN
 			MOV     R1, #2_00000011                     ;J0     
-            STR     R1, [R0]                            ;Escreve no registrador da memÛria funcionalidade digital
+            STR     R1, [R0]                            ;Escreve no registrador da mem√≥ria funcionalidade digital
 			
 ; 7. Para habilitar resistor de pull-up interno, setar PUR para 1
-			LDR     R0, =GPIO_PORTJ_AHB_PUR_R			;Carrega o endereÁo do PUR para a porta J
+			LDR     R0, =GPIO_PORTJ_AHB_PUR_R			;Carrega o endere√ßo do PUR para a porta J
 			MOV     R1, #2_11							;Habilitar funcionalidade digital de resistor de pull-up 
-            STR     R1, [R0]							;Escreve no registrador da memÛria do resistor de pull-up
-			
+            STR     R1, [R0]							;Escreve no registrador da mem√≥ria do resistor de pull-up
+		
+		   ; Limpar o AMSEL para desabilitar a anal√≥gica 
+			LDR R0, =GPIO_PORTA_AMSEL_R
+			LDR R1, [R0]
+			BIC R1, R1, #0xF0
+			STR R1, [R0]
+
+			; Sem fun√ß√£o alternativa
+			LDR R0, =GPIO_PORTA_AFSEL_R
+			LDR R1, [R0]
+			BIC R1, R1, #0xF0
+			STR R1, [R0]
+
+			; Limpar os campos para selecionar PA4 a PA7
+			LDR R0, =GPIO_PORTA_PCTL_R
+			LDR R1, [R0]
+			LDR R2, =0xFFFF0000
+			BIC R1, R1, R2
+			STR R1, [R0]
+
+			; Configurar como saidas
+			LDR R0, =GPIO_PORTA_DIR_R
+			LDR R1, [R0]
+			ORR R1, R1, #0xF0
+			STR R1, [R0]
+
+			; Habilitar funcao digital
+			LDR R0, =GPIO_PORTA_DEN_R
+			LDR R1, [R0]
+			ORR R1, R1, #0xF0
+			STR R1, [R0]
+
+			; ===== PQ0 a PQ3: saidas digitais para dados da PAT =====
+
+			LDR R0, =GPIO_PORTQ_AMSEL_R
+			LDR R1, [R0]
+			BIC R1, R1, #0x0F
+			STR R1, [R0]
+
+			LDR R0, =GPIO_PORTQ_AFSEL_R
+			LDR R1, [R0]
+			BIC R1, R1, #0x0F
+			STR R1, [R0]
+
+			LDR R0, =GPIO_PORTQ_PCTL_R
+			LDR R1, [R0]
+			LDR R2, =0x0000FFFF
+			BIC R1, R1, R2
+			STR R1, [R0]
+
+			LDR R0, =GPIO_PORTQ_DIR_R
+			LDR R1, [R0]
+			ORR R1, R1, #0x0F
+			STR R1, [R0]
+
+			LDR R0, =GPIO_PORTQ_DEN_R
+			LDR R1, [R0]
+			ORR R1, R1, #0x0F
+			STR R1, [R0]
+
+
 ; Interrupcoes
 			LDR R1, =GPIO_PORTJ_AHB_IM_R
 			MOV R2, #2_00
@@ -140,8 +239,9 @@ EsperaGPIO  LDR     R1, [R0]						;LÍ da memÛria o conte˙do do endereÁo do regis
 			MOV R2, #2_00
 			STR R2, [R1]
 
+			; Borda de descida em PJ1 e PJ0
 			LDR R1, =GPIO_PORTJ_AHB_IEV_R
-			MOV R2, #2_10
+			MOV R2, #2_00
 			STR R2, [R1]
 
 			LDR R1, =GPIO_PORTJ_AHB_ICR_R
@@ -151,76 +251,130 @@ EsperaGPIO  LDR     R1, [R0]						;LÍ da memÛria o conte˙do do endereÁo do regis
 			LDR R1, =GPIO_PORTJ_AHB_IM_R
 			MOV R2, #2_11
 			STR R2, [R1]
-
+			
+			;NVIC
 			LDR R1, =NVIC_EN1_R
 			MOV R2, #2_1
 			LSL R2, #19
 			STR R2, [R1]
 			
 			LDR R1, =NVIC_PRI12_R
-			MOV R2, #5
-			LSL R2, #29
+			LDR R2, [R1]
+
+			; Limpar somente o campo de prioridade da porta J
+			LDR R3, =0xE0000000
+			BIC R2, R2, R3
+
+			; Colocar prioridade 5 nos bits 31:29
+			MOV R3, #5
+			LSL R3, R3, #29
+			ORR R2, R2, R3
+
 			STR R2, [R1]
 	
 ; ====================
 			BX      LR
 
 ; -------------------------------------------------------------------------------
-; FunÁ„o PortN_Output
-; Par‚metro de entrada: R0 --> se o BIT1 est· ligado ou desligado
-; Par‚metro de saÌda: N„o tem
+; Fun√ß√£o PortN_Output
+; Par√¢metro de entrada: R0 --> se o BIT1 est√° ligado ou desligado
+; Par√¢metro de sa√≠da: N√£o tem
 PortN_Output
-	LDR	R1, =GPIO_PORTN_DATA_R		    ;Carrega o valor do offset do data register
-	;Read-Modify-Write para escrita
-	LDR R2, [R1]
-	BIC R2, #2_00000010                     ;Primeiro limpamos os dois bits do lido da porta R2 = R2 & 11111101
-	ORR R0, R0, R2                          ;Fazer o OR do lido pela porta com o par‚metro de entrada
-	STR R0, [R1]                            ;Escreve na porta N o barramento de dados do pino N1
-	BX LR									;Retorno
+    AND R0, R0, #2_00000011    ; somente PN0 e PN1
+    LDR R1, =GPIO_PORTN_DATA_R
+    LDR R2, [R1]
+    BIC R2, R2, #2_00000011
+    ORR R0, R0, R2
+    STR R0, [R1]
+    BX LR                      ;Retorno
+	
+	
+	
+; ------------------------------------------------------------------
+; PAT_Data_Output
+; Par√¢metro de entrada: R0 = padrao de 8 bits
+; Para√™tro de saida: bits 7:4 -> PA7:PA4; bits 3:0 -> PQ3:PQ0
+; Altera: R1, R2 e R3. Preserva R0
+; ------------------------------------------------------------------
+PAT_Data_Output
+    ; Separar os quatro bits destinados a porta A
+    AND R3, R0, #0xF0
+
+    ; Substituir PA4 a PA7
+    LDR R1, =GPIO_PORTA_DATA_R
+    LDR R2, [R1]
+    BIC R2, R2, #0xF0
+    ORR R2, R2, R3
+    STR R2, [R1]
+
+    ; Separar os quatro bits destinados para Q
+    AND R3, R0, #0x0F
+
+    ; Substituir somente PQ0 a PQ3
+    LDR R1, =GPIO_PORTQ_DATA_R
+    LDR R2, [R1]
+    BIC R2, R2, #0x0F
+    ORR R2, R2, R3
+    STR R2, [R1]
+
+    BX LR
 
 ; -------------------------------------------------------------------------------
 
 GPIOPortJ_Handler
-	LDR R6, =GPIO_PORTJ_AHB_MIS_R
+	LDR R0, =GPIO_PORTJ_AHB_MIS_R
 	
-	LDR R1, [R6]
-	AND R5, R1, #2_01	; J0 ta pressionado?
-	CMP R5, #2_01
-	BEQ J0_Interrupt
-	
-	AND R5, R1, #2_10	; J1 ta pressionado?
-	CMP R5, #2_10	
-	BEQ J1_Interrupt
+	LDR R1, [R0]
+	; J0 pressionado?
+	TST R1, #2_01
+    BNE AumentarAlvo
 
-Finish_Handle_J_Interrupt
-	BX LR
-	
-J0_Interrupt
-	LDR R1, =GPIO_PORTJ_AHB_ICR_R
-	MOV R0, #2_01
-	STR R0, [R1]
-	
-	MOV R0, #2_01
-	PUSH {LR}
-	BL PortN_Output
-	POP {LR}
-	
-	B Finish_Handle_J_Interrupt
+    ; Se nao J0, J1 pressionado?
+    TST R1, #2_10
+    BNE DiminuirAlvo
 
-J1_Interrupt
-	LDR R1, =GPIO_PORTJ_AHB_ICR_R
-	MOV R0, #2_10
-	STR R0, [R1]
+    ; Nenhum dos dois 
+    BX LR
 	
-	MOV R0, #2_00
-	PUSH {LR}
-	BL PortN_Output
-	POP {LR}
+AumentarAlvo
+
+	LDR R0, =GPIO_PORTJ_AHB_ICR_R
+	MOV R1, #2_01
+	STR R1, [R0]
 	
-	B Finish_Handle_J_Interrupt
+	;Ler a temp alvo
+	LDR R0 ,= TemperaturaAlvo
+	LDR R1, [R0]
+	
+	;Se ja chegou em 50,nao aumenta
+	CMP R1, #50
+	BHS FimInterrupcaoJ
+	
+	ADD R1, R1, #1
+    STR R1, [R0]
+	
+    B FimInterrupcaoJ
+
+DiminuirAlvo
+	LDR R0, =GPIO_PORTJ_AHB_ICR_R
+	MOV R1, #2_10
+	STR R1, [R0]
+	
+		;Ler a temp alvo
+	LDR R0 ,= TemperaturaAlvo
+	LDR R1, [R0]
+	
+	;Se ja chegou em 5,nao diminui
+	CMP R1, #5
+	BLS FimInterrupcaoJ
+	
+	SUB R1, R1, #1
+    STR R1, [R0]
+	
+FimInterrupcaoJ
+
+	BX LR 
 
 
-
-
-    ALIGN                           ; garante que o fim da seÁ„o est· alinhada 
+    ALIGN                           ; garante que o fim da se√ß√£o est√° alinhada 
     END                             ; fim do arquivo
