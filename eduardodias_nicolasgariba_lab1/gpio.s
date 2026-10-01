@@ -61,7 +61,6 @@ NVIC_PRI12_R	EQU    0xE000E430
 		; Se alguma função do arquivo for chamada em outro arquivo	
         EXPORT GPIO_Init            ; Permite chamar GPIO_Init de outro arquivo
 		EXPORT PortN_Output			; Permite chamar PortN_Output de outro arquivo
-		EXPORT PortJ_Input          ; Permite chamar PortJ_Input de outro arquivo
 		EXPORT GPIOPortJ_Handler
 												
 
@@ -180,15 +179,7 @@ PortN_Output
 	BX LR									;Retorno
 
 ; -------------------------------------------------------------------------------
-; Função PortJ_Input
-; Parâmetro de entrada: Não tem
-; Parâmetro de saída: R0 --> o valor da leitura
-PortJ_Input
-	LDR	R1, =GPIO_PORTJ_AHB_DATA_R		    ;Carrega o valor do offset do data register
-	LDR R0, [R1]                            ;Lê no barramento de dados dos pinos [J0]
-		
-	BX LR									;Retorno
-	
+
 GPIOPortJ_Handler
 	LDR R6, =GPIO_PORTJ_AHB_MIS_R
 	
