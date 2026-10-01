@@ -59,7 +59,7 @@ Start
 		MOV		R1, #22
 		STRH 	R1,[R0]
 		
-		LDR	R0, =TemperaturaAtual
+		LDR		R0, =TemperaturaAtual
 		MOV		R1, #10
 		STRH	R1,[R0]
 
@@ -96,19 +96,32 @@ AtualizaTemperatura
 		BLT		Aquecer 	; atual < alvo
 		BGT		Resfriar	; atual > alvo
 		B 		Equilibrio
+AtualizaAtual
+		LDR		R0, =TemperaturaAtual
+		STRH	R4, [R0]
+		B MainLoop
 		
 Aquecer
 		ADD 	R4, R4, #1
-		; TODO: atualizar leds 
-		B 		MainLoop
+		; PN1 acende
+		; PN0 apaga
+		MOV 	R0, #2_00000010
+		BL		PortN_Output
+		B 		AtualizaAtual
 
 Resfriar
 		SUB 	R4, R4, #1
-		; TODO: atualizar leds 
-		B		MainLoop
+		; PN1 apaga
+		; PN0 acende
+		MOV 	R0, #2_00000001
+		BL 		PortN_Output
+		B		AtualizaAtual
 
 Equilibrio
-		; TODO: atualizar leds 
+		; PN1 acende
+		; PN0 acende
+		MOV 	R0, #2_00000011
+		BL		PortN_Output
 		B 		MainLoop
 
 ; -------------------------------------------------------------------------------------------------------------------------
