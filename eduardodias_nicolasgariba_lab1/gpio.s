@@ -98,6 +98,10 @@ NVIC_PRI12_R	EQU    0xE000E430
 		EXPORT PortN_Output			; Permite chamar PortN_Output de outro arquivo
 		EXPORT GPIOPortJ_Handler
 		EXPORT PAT_Data_Output
+		EXPORT PAT_AllOff
+		EXPORT PAT_Dezena_On
+        EXPORT PAT_Unidade_On
+        EXPORT PAT_LEDs_On
 		
 		IMPORT TemperaturaAlvo
 												
@@ -360,6 +364,55 @@ PortN_Output
     ORR R0, R0, R2
     STR R0, [R1]
     BX LR                      ;Retorno
+
+; ------------------------------------------------------------------	
+; Desativa os dois displays e o grupo de LEDs.
+; Altera R1 e R2. Preserva R0.
+PAT_AllOff
+    LDR R1, =GPIO_PORTB_DATA_R
+    LDR R2, [R1]
+    BIC R2, R2, #0x30
+    STR R2, [R1]
+
+    LDR R1, =GPIO_PORTP_DATA_R
+    LDR R2, [R1]
+    BIC R2, R2, #0x20
+    STR R2, [R1]
+
+    BX LR
+	
+; ------------------------------------------------------------------
+; Ativa DS1, usado para a dezena: PB4 = 1
+; Chamar depois de PAT_AllOff e PAT_Data_Output.
+; ------------------------------------------------------------------
+PAT_Dezena_On
+    LDR R1, =GPIO_PORTB_DATA_R
+    LDR R2, [R1]
+    ORR R2, R2, #0x10
+    STR R2, [R1]
+    BX LR
+
+; ------------------------------------------------------------------
+; Ativa DS2, usado para a unidade: PB5 = 1
+; Chamar depois de PAT_AllOff e PAT_Data_Output.
+; ------------------------------------------------------------------
+PAT_Unidade_On
+    LDR R1, =GPIO_PORTB_DATA_R
+    LDR R2, [R1]
+    ORR R2, R2, #0x20
+    STR R2, [R1]
+    BX LR
+
+; ------------------------------------------------------------------
+; Ativa o grupo de oito LEDs: PP5 = 1
+; Chamar depois de PAT_AllOff e PAT_Data_Output.
+; ------------------------------------------------------------------
+PAT_LEDs_On
+    LDR R1, =GPIO_PORTP_DATA_R
+    LDR R2, [R1]
+    ORR R2, R2, #0x20
+    STR R2, [R1]
+    BX LR
 	
 	
 	
@@ -417,14 +470,14 @@ AumentarAlvo
 	
 	;Ler a temp alvo
 	LDR R0 ,= TemperaturaAlvo
-	LDR R1, [R0]
+	LDRH R1, [R0]
 	
 	;Se ja chegou em 50,nao aumenta
 	CMP R1, #50
 	BHS FimInterrupcaoJ
 	
 	ADD R1, R1, #1
-    STR R1, [R0]
+    STRH R1, [R0]
 	
     B FimInterrupcaoJ
 
@@ -435,14 +488,14 @@ DiminuirAlvo
 	
 		;Ler a temp alvo
 	LDR R0 ,= TemperaturaAlvo
-	LDR R1, [R0]
+	LDRH R1, [R0]
 	
 	;Se ja chegou em 5,nao diminui
 	CMP R1, #5
 	BLS FimInterrupcaoJ
 	
 	SUB R1, R1, #1
-    STR R1, [R0]
+    STRH R1, [R0]
 	
 FimInterrupcaoJ
 
