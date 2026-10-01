@@ -354,7 +354,8 @@ EsperaGPIO
 
 ; -------------------------------------------------------------------------------
 ; Função PortN_Output
-; Entrada: R0 = bits 1:0 com o estado de PN1:PN0
+; Parâmetro de entrada: R0 --> se o BIT1 está ligado ou desligado
+; Parâmetro de saída: Não tem
 PortN_Output
 	LDR	R1, =GPIO_PORTN_DATA_R
 	LDR	R2, [R1]
@@ -422,44 +423,44 @@ PAT_LEDs_On
 ; Chamar com os tres grupos da PAT desativados.
 ; ------------------------------------------------------------------
 PAT_Data_Output
-			; Separar os quatro bits destinados a porta A
-			AND R3, R0, #0xF0
+    ; Separar os quatro bits destinados a porta A
+    AND R3, R0, #0xF0
 
-			; Substituir PA4 a PA7
-			LDR R1, =GPIO_PORTA_DATA_R
-			LDR R2, [R1]
-			BIC R2, R2, #0xF0
-			ORR R2, R2, R3
-			STR R2, [R1]
+    ; Substituir PA4 a PA7
+    LDR R1, =GPIO_PORTA_DATA_R
+    LDR R2, [R1]
+    BIC R2, R2, #0xF0
+    ORR R2, R2, R3
+    STR R2, [R1]
 
-			; Separar os quatro bits destinados para Q
-			AND R3, R0, #0x0F
+    ; Separar os quatro bits destinados para Q
+    AND R3, R0, #0x0F
 
-			; Substituir somente PQ0 a PQ3
-			LDR R1, =GPIO_PORTQ_DATA_R
-			LDR R2, [R1]
-			BIC R2, R2, #0x0F
-			ORR R2, R2, R3
-			STR R2, [R1]
+    ; Substituir somente PQ0 a PQ3
+    LDR R1, =GPIO_PORTQ_DATA_R
+    LDR R2, [R1]
+    BIC R2, R2, #0x0F
+    ORR R2, R2, R3
+    STR R2, [R1]
 
-			BX LR
+    BX LR
 
 ; -------------------------------------------------------------------------------
 
 GPIOPortJ_Handler
-			LDR R0, =GPIO_PORTJ_AHB_MIS_R
-			
-			LDR R1, [R0]
-			; J0 pressionado?
-			TST R1, #2_01
-			BNE AumentarAlvo
+	LDR R0, =GPIO_PORTJ_AHB_MIS_R
+	
+	LDR R1, [R0]
+	; J0 pressionado?
+	TST R1, #2_01
+    BNE AumentarAlvo
 
-			; Se nao J0, J1 pressionado?
-			TST R1, #2_10
-			BNE DiminuirAlvo
+    ; Se nao J0, J1 pressionado?
+    TST R1, #2_10
+    BNE DiminuirAlvo
 
-			; Nenhum dos dois 
-			BX LR
+    ; Nenhum dos dois 
+    BX LR
 	
 AumentarAlvo
 
@@ -497,9 +498,8 @@ DiminuirAlvo
     STRH R1, [R0]
 	
 FimInterrupcaoJ
-			BX LR 
-			
-; =================
+
+	BX LR 
 
 
     ALIGN                           ; garante que o fim da seção está alinhada 
