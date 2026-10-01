@@ -370,83 +370,83 @@ PortN_Output
 ; Altera: R1, R2 e R3. Preserva R0
 ; ------------------------------------------------------------------
 PAT_Data_Output
-    ; Separar os quatro bits destinados a porta A
-    AND R3, R0, #0xF0
+			; Separar os quatro bits destinados a porta A
+			AND R3, R0, #0xF0
 
-    ; Substituir PA4 a PA7
-    LDR R1, =GPIO_PORTA_DATA_R
-    LDR R2, [R1]
-    BIC R2, R2, #0xF0
-    ORR R2, R2, R3
-    STR R2, [R1]
+			; Substituir PA4 a PA7
+			LDR R1, =GPIO_PORTA_DATA_R
+			LDR R2, [R1]
+			BIC R2, R2, #0xF0
+			ORR R2, R2, R3
+			STR R2, [R1]
 
-    ; Separar os quatro bits destinados para Q
-    AND R3, R0, #0x0F
+			; Separar os quatro bits destinados para Q
+			AND R3, R0, #0x0F
 
-    ; Substituir somente PQ0 a PQ3
-    LDR R1, =GPIO_PORTQ_DATA_R
-    LDR R2, [R1]
-    BIC R2, R2, #0x0F
-    ORR R2, R2, R3
-    STR R2, [R1]
+			; Substituir somente PQ0 a PQ3
+			LDR R1, =GPIO_PORTQ_DATA_R
+			LDR R2, [R1]
+			BIC R2, R2, #0x0F
+			ORR R2, R2, R3
+			STR R2, [R1]
 
-    BX LR
+			BX LR
 
 ; -------------------------------------------------------------------------------
 
 GPIOPortJ_Handler
-	LDR R0, =GPIO_PORTJ_AHB_MIS_R
-	
-	LDR R1, [R0]
-	; J0 pressionado?
-	TST R1, #2_01
-    BNE AumentarAlvo
+			LDR R0, =GPIO_PORTJ_AHB_MIS_R
+			
+			LDR R1, [R0]
+			; J0 pressionado?
+			TST R1, #2_01
+			BNE AumentarAlvo
 
-    ; Se nao J0, J1 pressionado?
-    TST R1, #2_10
-    BNE DiminuirAlvo
+			; Se nao J0, J1 pressionado?
+			TST R1, #2_10
+			BNE DiminuirAlvo
 
-    ; Nenhum dos dois 
-    BX LR
+			; Nenhum dos dois 
+			BX LR
 	
 AumentarAlvo
-
-	LDR R0, =GPIO_PORTJ_AHB_ICR_R
-	MOV R1, #2_01
-	STR R1, [R0]
-	
-	;Ler a temp alvo
-	LDR R0 ,= TemperaturaAlvo
-	LDR R1, [R0]
-	
-	;Se ja chegou em 50,nao aumenta
-	CMP R1, #50
-	BHS FimInterrupcaoJ
-	
-	ADD R1, R1, #1
-    STR R1, [R0]
-	
-    B FimInterrupcaoJ
+			LDR R0, =GPIO_PORTJ_AHB_ICR_R
+			MOV R1, #2_01
+			STR R1, [R0]
+			
+			;Ler a temp alvo
+			LDR R0 ,= TemperaturaAlvo
+			LDR R1, [R0]
+			
+			;Se ja chegou em 50,nao aumenta
+			CMP R1, #50
+			BHS FimInterrupcaoJ
+			
+			ADD R1, R1, #1
+			STR R1, [R0]
+			
+			B FimInterrupcaoJ
 
 DiminuirAlvo
-	LDR R0, =GPIO_PORTJ_AHB_ICR_R
-	MOV R1, #2_10
-	STR R1, [R0]
-	
-		;Ler a temp alvo
-	LDR R0 ,= TemperaturaAlvo
-	LDR R1, [R0]
-	
-	;Se ja chegou em 5,nao diminui
-	CMP R1, #5
-	BLS FimInterrupcaoJ
-	
-	SUB R1, R1, #1
-    STR R1, [R0]
+			LDR R0, =GPIO_PORTJ_AHB_ICR_R
+			MOV R1, #2_10
+			STR R1, [R0]
+			
+				;Ler a temp alvo
+			LDR R0 ,= TemperaturaAlvo
+			LDR R1, [R0]
+			
+			;Se ja chegou em 5,nao diminui
+			CMP R1, #5
+			BLS FimInterrupcaoJ
+			
+			SUB R1, R1, #1
+			STR R1, [R0]
 	
 FimInterrupcaoJ
-
-	BX LR 
+			BX LR 
+			
+; =================
 
 
     ALIGN                           ; garante que o fim da seção está alinhada 
