@@ -350,17 +350,14 @@ EsperaGPIO
 
 ; -------------------------------------------------------------------------------
 ; Função PortN_Output
-; Parâmetro de entrada: R0 --> se o BIT1 está ligado ou desligado
-; Parâmetro de saída: Não tem
+; Entrada: R0 = bits 1:0 com o estado de PN1:PN0
 PortN_Output
-    AND R0, R0, #2_00000011    ; somente PN0 e PN1
-    LDR R1, =GPIO_PORTN_DATA_R
-    LDR R2, [R1]
-    BIC R2, R2, #2_00000011
-    ORR R0, R0, R2
-    STR R0, [R1]
-    BX LR                      ;Retorno
-	
+			LDR	R1, =GPIO_PORTN_DATA_R
+			LDR	R2, [R1]
+			BIC	R2, #2_00000011			; limpa PN1 e PN0 (preserva os outros bits)
+			ORR	R0, R0, R2
+			STR	R0, [R1]
+			BX	LR
 	
 	
 ; ------------------------------------------------------------------
