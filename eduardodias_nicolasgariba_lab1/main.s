@@ -22,6 +22,11 @@
 ;<var>	SPACE <tam>                        ; Declara uma variável de nome <var>
                                            ; de <tam> bytes a partir da primeira 
                                            ; posição da RAM		
+		TemperaturaAlvo		SPACE		2
+		TemperaturaAtual	SPACE		2
+		Contador			SPACE		2
+		EXPORT TemperaturaAlvo	[DATA,SIZE=2]
+		EXPORT TemperaturaAtual [DATA,SIZE=2]
 
 ; -------------------------------------------------------------------------------
 ; Área de Código - Tudo abaixo da diretiva a seguir será armazenado na memória de 
@@ -40,46 +45,71 @@
 		IMPORT  SysTick_Wait1ms			
 		IMPORT  GPIO_Init
         IMPORT  PortN_Output
-        IMPORT  PortJ_Input	
 
 
 ; -------------------------------------------------------------------------------
 ; Função main()
 Start  		
-	BL PLL_Init                  ;Chama a subrotina para alterar o clock do microcontrolador para 80MHz
-	BL SysTick_Init
-	BL GPIO_Init                 ;Chama a subrotina que inicializa os GPIO
+		BL PLL_Init                  ;Chama a subrotina para alterar o clock do microcontrolador para 80MHz
+		BL SysTick_Init
+		BL GPIO_Init                 ;Chama a subrotina que inicializa os GPIO
+		
+		;Carregar valores iniciais nas variáveis
+		LDR 	R0, =TemperaturaAlvo
+		MOV		R1, #22
+		STRH 	R1,[R0]
+		
+		LDR	R0, =TemperaturaAtual
+		MOV		R1, #10
+		STRH	R1,[R0]
 
+		LDR 	R0, =Contador
+		MOV		R1, #166
+		STRH 	R1,[R0]
+	
 MainLoop
-	BL PortJ_Input				 ;Chama a subrotina que lê o estado das chaves e coloca o resultado em R0
-Verifica_Nenhuma
-	CMP	R0, #2_00000001			 ;Verifica se nenhuma chave está pressionada
-	BNE Verifica_SW1			 ;Se o teste viu que tem pelo menos alguma chave pressionada pula
-	MOV R0, #0                   ;Não acender nenhum LED
-	BL PortN_Output			 	 ;Chamar a função para não acender nenhum LED
-	B MainLoop					 ;Se o teste viu que nenhuma chave está pressionada, volta para o laço principal
-Verifica_SW1	
-	CMP R0, #2_00000000			 ;Verifica se somente a chave SW1 está pressionada
-	BNE MainLoop                 ;Se o teste falhou, volta para o início do laço principal
-	BL Pisca_LED				 ;Chama a rotina para piscar LED
-	B MainLoop                   ;Volta para o laço principal
+		; dezena:  dado, ativa Q2, Wait1ms, desativa Q2, Wait1ms
+		; unidade: dado, ativa Q1, Wait1ms, desativa Q1, Wait1ms
+		; LEDs:    dado, ativa Q3, Wait1ms, desativa Q3, Wait1ms
 
-;--------------------------------------------------------------------------------
-; Função Pisca_LED
-; Parâmetro de entrada: Não tem
-; Parâmetro de saída: Não tem
-Pisca_LED
-	MOV R0, #2_10				 ;Setar o parâmetro de entrada da função setando o BIT1
-	PUSH {LR}
-	BL PortN_Output				 ;Chamar a função para acender o LED1
-	MOV R0, #500                ;Chamar a rotina para esperar 0,5s
-	BL SysTick_Wait1ms
-	MOV R0, #0					 ;Setar o parâmetro de entrada da função apagando o BIT1
-	BL PortN_Output				 ;Chamar a rotina para apagar o LED
-	MOV R0, #500                ;Chamar a rotina para esperar 0,5
-	BL SysTick_Wait1ms	
-	POP {LR}
-	BX LR						 ;return
+		LDR   	R0, =Contador
+		LDRH  	R1, [R0]
+		SUBS  	R1, R1, #1
+		STRH  	R1, [R0]
+		BNE   	MainLoop                 ; ainda não completou 1 s
+
+		MOV   	R1, #166
+		STRH  	R1, [R0]             ; reinicia o contador
+		BL    	AtualizaTemperatura
+		B     	MainLoop
+
+AtualizaTemperatura
+		; comparar temperatura alvo com atual e atualizar o 
+		; valor da temperatura atual de acordo
+		; também atualizar os leds do port N
+		LDR		R0, =TemperaturaAtual
+		LDR		R1, =TemperaturaAlvo
+		LDRH	R4, [R0]
+		LDRH	R5, [R1]
+		
+		CMP 	R4, R5
+		BLT		Aquecer 	; atual < alvo
+		BGT		Resfriar	; atual > alvo
+		B 		Equilibrio
+		
+Aquecer
+		ADD 	R4, R4, #1
+		; TODO: atualizar leds 
+		B 		MainLoop
+
+Resfriar
+		SUB 	R4, R4, #1
+		; TODO: atualizar leds 
+		B		MainLoop
+
+Equilibrio
+		; TODO: atualizar leds 
+		B 		MainLoop
 
 ; -------------------------------------------------------------------------------------------------------------------------
 ; Fim do Arquivo
