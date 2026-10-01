@@ -421,6 +421,7 @@ PAT_LEDs_On
 ; Parâmetro de entrada: R0 = padrao de 8 bits
 ; Paraêtro de saida: bits 7:4 -> PA7:PA4; bits 3:0 -> PQ3:PQ0
 ; Altera: R1, R2 e R3. Preserva R0
+; Chamar com os tres grupos da PAT desativados.
 ; ------------------------------------------------------------------
 PAT_Data_Output
     ; Separar os quatro bits destinados a porta A
